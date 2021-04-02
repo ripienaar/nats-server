@@ -259,7 +259,20 @@ const JSMaxNameLen = 256
 // TODO(dlc) - Move to more generic location.
 type ApiError struct {
 	Code        int    `json:"code"`
+	Kind        string `json:"kind,omitempty"`
 	Description string `json:"description,omitempty"`
+}
+
+func (e *ApiError) Error() string {
+	return e.Description + " (" + e.Kind + ")"
+}
+
+func (e *ApiError) CopyF(a ...interface{}) *ApiError {
+	return &ApiError{
+		Code:        e.Code,
+		Kind:        e.Kind,
+		Description: fmt.Sprintf(e.Description, a...),
+	}
 }
 
 // ApiResponse is a standard response from the JetStream JSON API
@@ -584,22 +597,39 @@ type JSApiStreamTemplateNamesResponse struct {
 const JSApiStreamTemplateNamesResponseType = "io.nats.jetstream.api.v1.stream_template_names_response"
 
 var (
-	jsNotEnabledErr        = &ApiError{Code: 503, Description: "JetStream not enabled for account"}
-	jsBadRequestErr        = &ApiError{Code: 400, Description: "bad request"}
-	jsNotEmptyRequestErr   = &ApiError{Code: 400, Description: "expected an empty request payload"}
-	jsInvalidJSONErr       = &ApiError{Code: 400, Description: "invalid JSON"}
-	jsInsufficientErr      = &ApiError{Code: 503, Description: "insufficient resources"}
-	jsNoConsumerErr        = &ApiError{Code: 404, Description: "consumer not found"}
-	jsStreamMismatchErr    = &ApiError{Code: 400, Description: "stream name in subject does not match request"}
-	jsNoClusterSupportErr  = &ApiError{Code: 503, Description: "not currently supported in clustered mode"}
-	jsClusterNotAvailErr   = &ApiError{Code: 503, Description: "JetStream system temporarily unavailable"}
-	jsClusterRequiredErr   = &ApiError{Code: 503, Description: "JetStream clustering support required"}
-	jsPeerNotMemberErr     = &ApiError{Code: 400, Description: "peer not a member"}
-	jsClusterIncompleteErr = &ApiError{Code: 503, Description: "incomplete results"}
-	jsClusterTagsErr       = &ApiError{Code: 400, Description: "tags placement not supported for operation"}
-	jsClusterNoPeersErr    = &ApiError{Code: 400, Description: "no suitable peers for placement"}
-	jsServerNotMemberErr   = &ApiError{Code: 400, Description: "server is not a member of the cluster"}
-	jsNoMessageFoundErr    = &ApiError{Code: 404, Description: "no message found"}
+	jsNotEnabledErr                      = &ApiError{Code: 503, Description: "JetStream not enabled", Kind: "JS1"}
+	jsBadRequestErr                      = &ApiError{Code: 400, Description: "bad request", Kind: "JS2"}
+	jsNotEmptyRequestErr                 = &ApiError{Code: 400, Description: "expected an empty request payload", Kind: "JS3"}
+	jsInvalidJSONErr                     = &ApiError{Code: 400, Description: "invalid JSON", Kind: "JS4"}
+	jsInsufficientErr                    = &ApiError{Code: 503, Description: "insufficient resources", Kind: "JS5"}
+	jsNoConsumerErr                      = &ApiError{Code: 404, Description: "consumer not found", Kind: "JS6"}
+	jsStreamMismatchErr                  = &ApiError{Code: 400, Description: "stream name in subject does not match request", Kind: "JS7"}
+	jsNoClusterSupportErr                = &ApiError{Code: 503, Description: "not currently supported in clustered mode", Kind: "JS8"}
+	jsClusterNotAvailErr                 = &ApiError{Code: 503, Description: "JetStream system temporarily unavailable", Kind: "JS9"}
+	jsClusterRequiredErr                 = &ApiError{Code: 503, Description: "JetStream clustering support required", Kind: "JS10"}
+	jsPeerNotMemberErr                   = &ApiError{Code: 400, Description: "peer not a member", Kind: "JS11"}
+	jsClusterIncompleteErr               = &ApiError{Code: 503, Description: "incomplete results", Kind: "JS12"}
+	jsClusterTagsErr                     = &ApiError{Code: 400, Description: "tags placement not supported for operation", Kind: "JS13"}
+	jsClusterNoPeersErr                  = &ApiError{Code: 400, Description: "no suitable peers for placement", Kind: "JS14"}
+	jsServerNotMemberErr                 = &ApiError{Code: 400, Description: "server is not a member of the cluster", Kind: "JS15"}
+	jsNoMessageFoundErr                  = &ApiError{Code: 404, Description: "no message found", Kind: "JS16"}
+	jsStreamNotFoundErr                  = &ApiError{Code: 404, Description: "stream not found", Kind: "JS17"}
+	jsStreamNameInUseErr                 = &ApiError{Code: 500, Description: "stream name already in use", Kind: "JS18"}
+	jsConsumerAlreadyUsedErr             = &ApiError{Code: 500, Description: "consumer name already in use", Kind: "JS19"}
+	jsNotEnabledForAccountErr            = &ApiError{Code: 500, Description: "JetStream not enabled for account", Kind: "JS20"}
+	jsNotLeaderErr                       = &ApiError{Code: 500, Description: "JetStream cluster can not handle request", Kind: "JS21"}
+	jsNotAssignedErr                     = &ApiError{Code: 500, Description: "JetStream cluster not assigned to this server", Kind: "JS22"}
+	jsNotClusteredErr                    = &ApiError{Code: 500, Description: "JetStream not in clustered mode", Kind: "JS23"}
+	jsResourcesExceededErr               = &ApiError{Code: 500, Description: "JetStream resources exceeded for server", Kind: "JS24"}
+	jsMirrorsMustHaveNoSubjectsErr       = &ApiError{Code: 400, Description: "stream mirrors can not also contain subjects", Kind: "JS25"}
+	jsMirrorsCannotHaveSourcesErr        = &ApiError{Code: 400, Description: "stream mirrors can not also contain other sources", Kind: "JS26"}
+	jsMirrorsCannotBeFilteredErr         = &ApiError{Code: 400, Description: "stream mirrors can not contain filtered subjects", Kind: "JS27"}
+	jsMirrorsNotTimeAndSequenceErr       = &ApiError{Code: 400, Description: "stream mirrors can not have both start seq and start time configured", Kind: "JS28"}
+	jsMirrorMsgSizeInsufficientErr       = &ApiError{Code: 400, Description: "stream mirror must have max message size >= source", Kind: "JS29"}
+	jsSourceSizeInsufficientErr          = &ApiError{Code: 400, Description: "stream source must have max message size >= target", Kind: "JS30"}
+	jsExternalDelPrefixWithWildcardsErrF = &ApiError{Code: 400, Description: "stream external delivery prefix %q must not contain wildcards", Kind: "JS31"}
+	jsExternalDelPrefixOverlapsErrF      = &ApiError{Code: 400, Description: "stream external delivery prefix %q overlaps with stream subject %q", Kind: "JS32"}
+	jsExternalApiPrefixOverlapsErrf      = &ApiError{Code: 400, Description: "stream external api prefix %q must not overlap with %s", Kind: "JS33"}
 )
 
 // For easier handling of exports and imports.
@@ -692,7 +722,7 @@ func (js *jetStream) apiDispatch(sub *subscription, c *client, subject, reply st
 func (s *Server) setJetStreamExportSubs() error {
 	js := s.getJetStream()
 	if js == nil {
-		return ErrJetStreamNotEnabled
+		return jsNotEnabledErr
 	}
 
 	// This is the catch all now for all JetStream API calls.
@@ -1082,6 +1112,10 @@ func (s *Server) jsonResponse(v interface{}) string {
 }
 
 func jsError(err error) *ApiError {
+	if apierr, ok := err.(*ApiError); ok {
+		return apierr
+	}
+
 	return &ApiError{
 		Code:        500,
 		Description: err.Error(),
@@ -1089,6 +1123,10 @@ func jsError(err error) *ApiError {
 }
 
 func jsNotFoundError(err error) *ApiError {
+	if apierr, ok := err.(*ApiError); ok {
+		return apierr
+	}
+
 	return &ApiError{
 		Code:        404,
 		Description: err.Error(),
@@ -1172,22 +1210,22 @@ func (s *Server) jsStreamCreateRequest(sub *subscription, c *client, subject, re
 	// Do some pre-checking for mirror config to avoid cycles in clustered mode.
 	if cfg.Mirror != nil {
 		if len(cfg.Subjects) > 0 {
-			resp.Error = &ApiError{Code: 400, Description: "stream mirrors can not also contain subjects"}
+			resp.Error = jsMirrorsMustHaveNoSubjectsErr
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		}
 		if len(cfg.Sources) > 0 {
-			resp.Error = &ApiError{Code: 400, Description: "stream mirrors can not also contain other sources"}
+			resp.Error = jsMirrorsCannotHaveSourcesErr
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		}
 		if cfg.Mirror.FilterSubject != _EMPTY_ {
-			resp.Error = &ApiError{Code: 400, Description: "stream mirrors can not contain filtered subjects"}
+			resp.Error = jsMirrorsCannotBeFilteredErr
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		}
 		if cfg.Mirror.OptStartSeq > 0 && cfg.Mirror.OptStartTime != nil {
-			resp.Error = &ApiError{Code: 400, Description: "stream mirrors can not have both start seq and start time configured"}
+			resp.Error = jsMirrorsNotTimeAndSequenceErr
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		}
@@ -1198,7 +1236,7 @@ func (s *Server) jsStreamCreateRequest(sub *subscription, c *client, subject, re
 			streamSubs = append(streamSubs, subs...)
 		}
 		if exists && cfg.MaxMsgSize > 0 && maxMsgSize > 0 && cfg.MaxMsgSize < maxMsgSize {
-			resp.Error = &ApiError{Code: 400, Description: "stream mirror must have max message size >= source"}
+			resp.Error = jsMirrorMsgSizeInsufficientErr
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		}
@@ -1227,7 +1265,7 @@ func (s *Server) jsStreamCreateRequest(sub *subscription, c *client, subject, re
 				apiPrefixes = append(apiPrefixes, src.External.ApiPrefix)
 			}
 			if exists && cfg.MaxMsgSize > 0 && maxMsgSize > 0 && cfg.MaxMsgSize < maxMsgSize {
-				resp.Error = &ApiError{Code: 400, Description: "stream source must have max message size >= target"}
+				resp.Error = jsSourceSizeInsufficientErr
 				s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 				return
 			}
@@ -1236,13 +1274,13 @@ func (s *Server) jsStreamCreateRequest(sub *subscription, c *client, subject, re
 	// check prefix overlap with subjects
 	for _, pfx := range deliveryPrefixes {
 		if !IsValidPublishSubject(pfx) {
-			resp.Error = &ApiError{Code: 400, Description: fmt.Sprintf("stream external delivery prefix %q must not contain wildcards", pfx)}
+			resp.Error = jsExternalDelPrefixWithWildcardsErrF.CopyF(pfx)
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		}
 		for _, sub := range streamSubs {
 			if SubjectsCollide(sub, fmt.Sprintf("%s.%s", pfx, sub)) {
-				resp.Error = &ApiError{Code: 400, Description: fmt.Sprintf("stream external delivery prefix %q overlaps with stream subject %q", pfx, sub)}
+				resp.Error = jsExternalDelPrefixOverlapsErrF.CopyF(pfx, sub)
 				s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 				return
 			}
@@ -1251,7 +1289,7 @@ func (s *Server) jsStreamCreateRequest(sub *subscription, c *client, subject, re
 	// check if api prefixes overlap
 	for _, apiPfx := range apiPrefixes {
 		if SubjectsCollide(apiPfx, JSApiPrefix) {
-			resp.Error = &ApiError{Code: 400, Description: fmt.Sprintf("stream external api prefix %q must not overlap with %s", apiPfx, JSApiPrefix)}
+			resp.Error = jsExternalApiPrefixOverlapsErrf.CopyF(apiPfx, JSApiPrefix)
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		}
@@ -1416,7 +1454,7 @@ func (s *Server) jsStreamNamesRequest(sub *subscription, c *client, subject, rep
 		}
 		js.mu.RLock()
 		for stream, sa := range cc.streams[acc.Name] {
-			if sa.err == ErrJetStreamNotAssigned {
+			if sa.err == jsNotAssignedErr {
 				continue
 			}
 			if filter != _EMPTY_ {
@@ -1591,7 +1629,7 @@ func (s *Server) jsStreamInfoRequest(sub *subscription, c *client, subject, repl
 				return
 			}
 			// No stream present.
-			resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+			resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		} else if sa == nil {
@@ -1690,7 +1728,7 @@ func (s *Server) jsStreamLeaderStepDownRequest(sub *subscription, c *client, sub
 	js.mu.RUnlock()
 
 	if isLeader && sa == nil {
-		resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+		resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 		return
 	} else if sa == nil {
@@ -1778,7 +1816,7 @@ func (s *Server) jsConsumerLeaderStepDownRequest(sub *subscription, c *client, s
 	js.mu.RUnlock()
 
 	if isLeader && sa == nil {
-		resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+		resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 		return
 	} else if sa == nil {
@@ -1817,7 +1855,7 @@ func (s *Server) jsConsumerLeaderStepDownRequest(sub *subscription, c *client, s
 
 	mset, err := acc.lookupStream(stream)
 	if err != nil {
-		resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+		resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 		return
 	}
@@ -1903,7 +1941,7 @@ func (s *Server) jsStreamRemovePeerRequest(sub *subscription, c *client, subject
 
 	if sa == nil {
 		// No stream present.
-		resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+		resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 		return
 	}
@@ -2201,7 +2239,7 @@ func (s *Server) jsMsgDeleteRequest(sub *subscription, c *client, subject, reply
 				return
 			}
 			// No stream present.
-			resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+			resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		} else if sa == nil {
@@ -2306,7 +2344,7 @@ func (s *Server) jsMsgGetRequest(sub *subscription, c *client, subject, reply st
 				return
 			}
 			// No stream present.
-			resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+			resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		} else if sa == nil {
@@ -2401,7 +2439,7 @@ func (s *Server) jsStreamPurgeRequest(sub *subscription, c *client, subject, rep
 				return
 			}
 			// No stream present.
-			resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+			resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		} else if sa == nil {
@@ -2503,7 +2541,7 @@ func (s *Server) jsStreamRestoreRequest(sub *subscription, c *client, subject, r
 	}
 
 	if _, err := acc.lookupStream(stream); err == nil {
-		resp.Error = jsError(ErrJetStreamStreamAlreadyUsed)
+		resp.Error = jsError(jsStreamNameInUseErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 		return
 	}
@@ -2589,7 +2627,7 @@ func (s *Server) processStreamRestore(ci *ClientInfo, acc *Account, cfg *StreamC
 		total += len(msg)
 		if js.wouldExceedLimits(FileStorage, total) {
 			s.resourcesExeededError()
-			resultCh <- result{ErrJetStreamResourcesExceeded, reply}
+			resultCh <- result{jsResourcesExceededErr, reply}
 			return
 		}
 
@@ -3082,14 +3120,14 @@ func (s *Server) jsConsumerNamesRequest(sub *subscription, c *client, subject, r
 		sas := cc.streams[acc.Name]
 		if sas == nil {
 			js.mu.RUnlock()
-			resp.Error = jsNotFoundError(ErrJetStreamNotEnabled)
+			resp.Error = jsNotFoundError(jsNotEnabledErr)
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		}
 		sa := sas[streamName]
 		if sa == nil || sa.err != nil {
 			js.mu.RUnlock()
-			resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+			resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 			s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 			return
 		}
@@ -3264,7 +3302,7 @@ func (s *Server) jsConsumerInfoRequest(sub *subscription, c *client, subject, re
 				return
 			}
 			if sa == nil {
-				resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+				resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 				s.sendAPIErrResponse(ci, acc, subject, reply, string(msg), s.jsonResponse(&resp))
 				return
 			}

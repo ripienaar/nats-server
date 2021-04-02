@@ -175,33 +175,6 @@ var (
 
 	// ErrNoTransforms signals no subject transforms are available to map this subject.
 	ErrNoTransforms = errors.New("no matching transforms available")
-
-	// ErrJetStreamNotEnabled is returned when JetStream is not enabled.
-	ErrJetStreamNotEnabled = errors.New("jetstream not enabled")
-
-	// ErrJetStreamStreamNotFound is returned when a stream can not be found.
-	ErrJetStreamStreamNotFound = errors.New("stream not found")
-
-	// ErrJetStreamStreamAlreadyUsed is returned when a stream name has already been taken.
-	ErrJetStreamStreamAlreadyUsed = errors.New("stream name already in use")
-
-	// ErrJetStreamConsumerAlreadyUsed is returned when a consumer name has already been taken.
-	ErrJetStreamConsumerAlreadyUsed = errors.New("consumer name already in use")
-
-	// ErrJetStreamNotEnabledForAccount is returned JetStream is not enabled for this account.
-	ErrJetStreamNotEnabledForAccount = errors.New("jetstream not enabled for account")
-
-	// ErrJetStreamNotLeader is returned when issuing commands to a cluster on the wrong server.
-	ErrJetStreamNotLeader = errors.New("jetstream cluster can not handle request")
-
-	// ErrJetStreamNotAssigned is returned when the resource (stream or consumer) is not assigned.
-	ErrJetStreamNotAssigned = errors.New("jetstream cluster not assigned to this server")
-
-	// ErrJetStreamNotClustered is returned when a call requires clustering and we are not.
-	ErrJetStreamNotClustered = errors.New("jetstream not in clustered mode")
-
-	// ErrJetStreamResourcesExceeded is returned when a call would exceed internal resource limits.
-	ErrJetStreamResourcesExceeded = errors.New("jetstream resources exceeded for server")
 )
 
 // configErr is a configuration error.

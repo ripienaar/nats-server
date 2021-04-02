@@ -5236,7 +5236,7 @@ func TestJetStreamClusterServerLimits(t *testing.T) {
 		}
 	}
 	if err == nil || !strings.HasPrefix(err.Error(), "nats: insufficient resources") {
-		t.Fatalf("Expected a ErrJetStreamResourcesExceeded error, got %v", err)
+		t.Fatalf("Expected a jsResourcesExceededErr error, got %v", err)
 	}
 
 	si, err := js.StreamInfo("TM")
@@ -5269,7 +5269,7 @@ func TestJetStreamClusterServerLimits(t *testing.T) {
 		}
 	}
 	if err == nil || !strings.HasPrefix(err.Error(), "nats: insufficient resources") {
-		t.Fatalf("Expected a ErrJetStreamResourcesExceeded error, got %v", err)
+		t.Fatalf("Expected a jsResourcesExceededErr error, got %v", err)
 	}
 
 	si, err = js.StreamInfo("TF")

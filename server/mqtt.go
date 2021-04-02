@@ -904,7 +904,7 @@ func (s *Server) mqttCreateAccountSessionManager(acc *Account, quitCh chan struc
 		Retention: InterestPolicy,
 		Replicas:  as.replicas,
 	}
-	if _, err := jsa.createStream(cfg); isErrorOtherThan(err, ErrJetStreamStreamAlreadyUsed) {
+	if _, err := jsa.createStream(cfg); isErrorOtherThan(err, jsStreamNameInUseErr) {
 		return nil, fmt.Errorf("create messages stream for account %q: %v", acc.GetName(), err)
 	}
 
@@ -917,7 +917,7 @@ func (s *Server) mqttCreateAccountSessionManager(acc *Account, quitCh chan struc
 		Replicas:  as.replicas,
 	}
 	si, err := jsa.createStream(cfg)
-	if isErrorOtherThan(err, ErrJetStreamStreamAlreadyUsed) {
+	if isErrorOtherThan(err, jsStreamNameInUseErr) {
 		return nil, fmt.Errorf("create retained messages stream for account %q: %v", acc.GetName(), err)
 	}
 	if err != nil {
@@ -1824,7 +1824,7 @@ func (as *mqttAccountSessionManager) createOrRestoreSession(clientID string, opt
 	si, err := jsa.createStream(cfg)
 	// If there is an error and not simply "already used" (which means that the
 	// stream already exists) then we fail.
-	if isErrorOtherThan(err, ErrJetStreamStreamAlreadyUsed) {
+	if isErrorOtherThan(err, jsStreamNameInUseErr) {
 		return formatError("create session stream", err)
 	}
 	if err != nil {

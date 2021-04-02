@@ -644,7 +644,7 @@ func (s *Server) JetStreamNumAccounts() int {
 func (s *Server) JetStreamReservedResources() (int64, int64, error) {
 	js := s.getJetStream()
 	if js == nil {
-		return -1, -1, ErrJetStreamNotEnabled
+		return -1, -1, jsNotEnabledErr
 	}
 	js.mu.RLock()
 	defer js.mu.RUnlock()
@@ -675,7 +675,7 @@ func (a *Account) EnableJetStream(limits *JetStreamAccountLimits) error {
 
 	js := s.getJetStream()
 	if js == nil {
-		return ErrJetStreamNotEnabled
+		return jsNotEnabledErr
 	}
 	if s.SystemAccount() == a {
 		return fmt.Errorf("jetstream can not be enabled on the system account")
@@ -958,14 +958,14 @@ func (a *Account) lookupStream(name string) (*stream, error) {
 	a.mu.RUnlock()
 
 	if jsa == nil {
-		return nil, ErrJetStreamNotEnabled
+		return nil, jsNotEnabledErr
 	}
 	jsa.mu.Lock()
 	defer jsa.mu.Unlock()
 
 	mset, ok := jsa.streams[name]
 	if !ok {
-		return nil, ErrJetStreamStreamNotFound
+		return nil, jsStreamNotFoundErr
 	}
 	return mset, nil
 }
@@ -982,10 +982,10 @@ func (a *Account) UpdateJetStreamLimits(limits *JetStreamAccountLimits) error {
 	}
 	js := s.getJetStream()
 	if js == nil {
-		return ErrJetStreamNotEnabled
+		return jsNotEnabledErr
 	}
 	if jsa == nil {
-		return ErrJetStreamNotEnabledForAccount
+		return jsNotEnabledForAccountErr
 	}
 
 	if limits == nil {
@@ -1073,7 +1073,7 @@ func (a *Account) DisableJetStream() error {
 
 	js := s.getJetStream()
 	if js == nil {
-		return ErrJetStreamNotEnabled
+		return jsNotEnabledErr
 	}
 
 	// Remove service imports.
@@ -1098,7 +1098,7 @@ func (a *Account) removeJetStream() error {
 
 	js := s.getJetStream()
 	if js == nil {
-		return ErrJetStreamNotEnabled
+		return jsNotEnabledErr
 	}
 
 	return js.disableJetStream(js.lookupAccount(a))
@@ -1107,7 +1107,7 @@ func (a *Account) removeJetStream() error {
 // Disable JetStream for the account.
 func (js *jetStream) disableJetStream(jsa *jsAccount) error {
 	if jsa == nil || jsa.account == nil {
-		return ErrJetStreamNotEnabledForAccount
+		return jsNotEnabledForAccountErr
 	}
 
 	js.mu.Lock()
@@ -1484,7 +1484,7 @@ func (a *Account) checkForJetStream() (*Server, *jsAccount, error) {
 	a.mu.RUnlock()
 
 	if s == nil || jsa == nil {
-		return nil, nil, ErrJetStreamNotEnabledForAccount
+		return nil, nil, jsNotEnabledForAccountErr
 	}
 
 	return s, jsa, nil
@@ -1695,7 +1695,7 @@ func (t *streamTemplate) delete() error {
 	t.mu.Unlock()
 
 	if jsa == nil {
-		return ErrJetStreamNotEnabled
+		return jsNotEnabledErr
 	}
 
 	jsa.mu.Lock()

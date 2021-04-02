@@ -256,7 +256,7 @@ func (a *Account) addStreamWithAssignment(config *StreamConfig, fsConfig *FileSt
 			}
 			return mset, nil
 		} else {
-			return nil, ErrJetStreamStreamAlreadyUsed
+			return nil, jsStreamNameInUseErr
 		}
 	}
 	// Check for limits.
@@ -1256,7 +1256,7 @@ func (mset *stream) processInboundMirrorMsg(m *inMsg) bool {
 	if node != nil {
 		if js.limitsExceeded(stype) {
 			s.resourcesExeededError()
-			err = ErrJetStreamResourcesExceeded
+			err = jsResourcesExceededErr
 		} else {
 			err = node.Propose(encodeStreamMsg(m.subj, _EMPTY_, m.hdr, m.msg, sseq-1, ts))
 		}
@@ -2436,7 +2436,7 @@ func (mset *stream) processJetStreamMsg(subject, reply string, hdr, msg []byte, 
 		if node := mset.raftNode(); node != nil {
 			node.StepDown()
 		}
-		return ErrJetStreamResourcesExceeded
+		return jsResourcesExceededErr
 	}
 
 	var noInterest bool
@@ -2741,7 +2741,7 @@ func (mset *stream) stop(deleteFlag, advisory bool) error {
 	mset.mu.RUnlock()
 
 	if jsa == nil {
-		return ErrJetStreamNotEnabledForAccount
+		return jsNotEnabledForAccountErr
 	}
 
 	// Remove from our account map.
@@ -3032,7 +3032,7 @@ func (a *Account) RestoreStream(ncfg *StreamConfig, r io.Reader) (*stream, error
 
 	// See if this stream already exists.
 	if _, err := a.lookupStream(cfg.Name); err == nil {
-		return nil, ErrJetStreamStreamAlreadyUsed
+		return nil, jsStreamNameInUseErr
 	}
 	// Move into the correct place here.
 	ndir := path.Join(jsa.storeDir, streamsDir, cfg.Name)

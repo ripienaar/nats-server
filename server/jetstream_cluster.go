@@ -218,7 +218,7 @@ func (s *Server) JetStreamIsCurrent() bool {
 func (s *Server) JetStreamSnapshotMeta() error {
 	js := s.getJetStream()
 	if js == nil {
-		return ErrJetStreamNotEnabled
+		return jsNotEnabledErr
 	}
 	js.mu.RLock()
 	defer js.mu.RUnlock()
@@ -233,10 +233,10 @@ func (s *Server) JetStreamSnapshotMeta() error {
 func (s *Server) JetStreamStepdownStream(account, stream string) error {
 	js, cc := s.getJetStreamCluster()
 	if js == nil {
-		return ErrJetStreamNotEnabled
+		return jsNotEnabledErr
 	}
 	if cc == nil {
-		return ErrJetStreamNotClustered
+		return jsNotClusteredErr
 	}
 	// Grab account
 	acc, err := s.LookupAccount(account)
@@ -259,10 +259,10 @@ func (s *Server) JetStreamStepdownStream(account, stream string) error {
 func (s *Server) JetStreamSnapshotStream(account, stream string) error {
 	js, cc := s.getJetStreamCluster()
 	if js == nil {
-		return ErrJetStreamNotEnabled
+		return jsNotEnabledErr
 	}
 	if cc == nil {
-		return ErrJetStreamNotClustered
+		return jsNotClusteredErr
 	}
 	// Grab account
 	acc, err := s.LookupAccount(account)
@@ -278,7 +278,7 @@ func (s *Server) JetStreamSnapshotStream(account, stream string) error {
 	mset.mu.RLock()
 	if !mset.node.Leader() {
 		mset.mu.RUnlock()
-		return ErrJetStreamNotLeader
+		return jsNotLeaderErr
 	}
 	n := mset.node
 	mset.mu.RUnlock()
@@ -446,7 +446,7 @@ func (s *Server) enableJetStreamClustering() error {
 	}
 	js := s.getJetStream()
 	if js == nil {
-		return ErrJetStreamNotEnabled
+		return jsNotEnabledErr
 	}
 	// Already set.
 	if js.cluster != nil {
@@ -2052,7 +2052,7 @@ func (js *jetStream) processClusterCreateStream(acc *Account, sa *streamAssignme
 				s.Warnf("JetStream cluster error updating stream %q for account %q: %v", sa.Config.Name, acc.Name, err)
 				mset.setStreamAssignment(osa)
 			}
-		} else if err == ErrJetStreamStreamNotFound {
+		} else if err == jsStreamNotFoundErr {
 			// Add in the stream here.
 			mset, err = acc.addStreamWithAssignment(sa.Config, nil, sa)
 		}
@@ -2287,14 +2287,14 @@ func (js *jetStream) processConsumerAssignment(ca *consumerAssignment) {
 	sa := js.streamAssignment(ca.Client.serviceAccount(), ca.Stream)
 	if sa == nil {
 		s.Debugf("Consumer create failed, could not locate stream '%s > %s'", ca.Client.serviceAccount(), ca.Stream)
-		ca.err = ErrJetStreamStreamNotFound
+		ca.err = jsStreamNotFoundErr
 		result := &consumerAssignmentResult{
 			Account:  ca.Client.serviceAccount(),
 			Stream:   ca.Stream,
 			Consumer: ca.Name,
 			Response: &JSApiConsumerCreateResponse{ApiResponse: ApiResponse{Type: JSApiConsumerCreateResponseType}},
 		}
-		result.Response.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+		result.Response.Error = jsNotFoundError(jsStreamNotFoundErr)
 		// Send response to the metadata leader. They will forward to the user as needed.
 		b, _ := json.Marshal(result) // Avoids auto-processing and doing fancy json with newlines.
 		s.sendInternalMsgLocked(consumerAssignmentSubj, _EMPTY_, nil, b)
@@ -2401,14 +2401,14 @@ func (js *jetStream) processClusterCreateConsumer(ca *consumerAssignment) {
 	if err != nil {
 		js.mu.Lock()
 		s.Debugf("Consumer create failed, could not locate stream '%s > %s'", ca.Client.serviceAccount(), ca.Stream)
-		ca.err = ErrJetStreamStreamNotFound
+		ca.err = jsStreamNotFoundErr
 		result := &consumerAssignmentResult{
 			Account:  ca.Client.serviceAccount(),
 			Stream:   ca.Stream,
 			Consumer: ca.Name,
 			Response: &JSApiConsumerCreateResponse{ApiResponse: ApiResponse{Type: JSApiConsumerCreateResponseType}},
 		}
-		result.Response.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+		result.Response.Error = jsNotFoundError(jsStreamNotFoundErr)
 		// Send response to the metadata leader. They will forward to the user as needed.
 		b, _ := json.Marshal(result) // Avoids auto-processing and doing fancy json with newlines.
 		s.sendInternalMsgLocked(consumerAssignmentSubj, _EMPTY_, nil, b)
@@ -3002,7 +3002,7 @@ func (js *jetStream) processStreamAssignmentResults(sub *subscription, c *client
 		// TODO(dlc) - Could have mixed results, should track per peer.
 		// Set sa.err while we are deleting so we will not respond to list/names requests.
 		if !result.Update && time.Since(sa.Created) < 5*time.Second {
-			sa.err = ErrJetStreamNotAssigned
+			sa.err = jsNotAssignedErr
 			cc.meta.Propose(encodeDeleteStreamAssignment(sa))
 		}
 	}
@@ -3033,7 +3033,7 @@ func (js *jetStream) processConsumerAssignmentResults(sub *subscription, c *clie
 			// TODO(dlc) - Could have mixed results, should track per peer.
 			if result.Response.Error != nil {
 				// So while we are deleting we will not respond to list/names requests.
-				ca.err = ErrJetStreamNotAssigned
+				ca.err = jsNotAssignedErr
 				cc.meta.Propose(encodeDeleteConsumerAssignment(ca))
 			}
 		}
@@ -3257,7 +3257,7 @@ func (s *Server) jsClusteredStreamRequest(ci *ClientInfo, acc *Account, subject,
 	defer js.mu.Unlock()
 
 	if sa := js.streamAssignment(acc.Name, cfg.Name); sa != nil {
-		resp.Error = jsError(ErrJetStreamStreamAlreadyUsed)
+		resp.Error = jsError(jsStreamNameInUseErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(rmsg), s.jsonResponse(&resp))
 		return
 	}
@@ -3304,7 +3304,7 @@ func (s *Server) jsClusteredStreamUpdateRequest(ci *ClientInfo, acc *Account, su
 	osa := js.streamAssignment(acc.Name, cfg.Name)
 
 	if osa == nil {
-		resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+		resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(rmsg), s.jsonResponse(&resp))
 		return
 	}
@@ -3350,7 +3350,7 @@ func (s *Server) jsClusteredStreamDeleteRequest(ci *ClientInfo, acc *Account, st
 	osa := js.streamAssignment(acc.Name, stream)
 	if osa == nil {
 		var resp = JSApiStreamDeleteResponse{ApiResponse: ApiResponse{Type: JSApiStreamDeleteResponseType}}
-		resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+		resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(rmsg), s.jsonResponse(&resp))
 		return
 	}
@@ -3376,7 +3376,7 @@ func (s *Server) jsClusteredStreamPurgeRequest(ci *ClientInfo, acc *Account, mse
 	sa := js.streamAssignment(acc.Name, stream)
 	if sa == nil {
 		resp := JSApiStreamPurgeResponse{ApiResponse: ApiResponse{Type: JSApiStreamPurgeResponseType}}
-		resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+		resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(rmsg), s.jsonResponse(&resp))
 		return
 	}
@@ -3410,7 +3410,7 @@ func (s *Server) jsClusteredStreamRestoreRequest(ci *ClientInfo, acc *Account, r
 	resp := JSApiStreamRestoreResponse{ApiResponse: ApiResponse{Type: JSApiStreamRestoreResponseType}}
 
 	if sa := js.streamAssignment(ci.serviceAccount(), cfg.Name); sa != nil {
-		resp.Error = jsError(ErrJetStreamStreamAlreadyUsed)
+		resp.Error = jsError(jsStreamNameInUseErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(rmsg), s.jsonResponse(&resp))
 		return
 	}
@@ -3724,7 +3724,7 @@ func (s *Server) jsClusteredConsumerDeleteRequest(ci *ClientInfo, acc *Account, 
 
 	sa := js.streamAssignment(acc.Name, stream)
 	if sa == nil {
-		resp.Error = jsNotFoundError(ErrJetStreamStreamNotFound)
+		resp.Error = jsNotFoundError(jsStreamNotFoundErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(rmsg), s.jsonResponse(&resp))
 		return
 
@@ -3846,7 +3846,7 @@ func (s *Server) jsClusteredConsumerRequest(ci *ClientInfo, acc *Account, subjec
 	// Lookup the stream assignment.
 	sa := js.streamAssignment(acc.Name, stream)
 	if sa == nil {
-		resp.Error = jsError(ErrJetStreamStreamNotFound)
+		resp.Error = jsError(jsStreamNotFoundErr)
 		s.sendAPIErrResponse(ci, acc, subject, reply, string(rmsg), s.jsonResponse(&resp))
 		return
 	}
@@ -3881,7 +3881,7 @@ func (s *Server) jsClusteredConsumerRequest(ci *ClientInfo, acc *Account, subjec
 		if ca := sa.consumers[oname]; ca != nil && !ca.deleted {
 			// This can be ok if delivery subject update.
 			if !reflect.DeepEqual(cfg, ca.Config) && !configsEqualSansDelivery(*cfg, *ca.Config) {
-				resp.Error = jsError(ErrJetStreamConsumerAlreadyUsed)
+				resp.Error = jsError(jsConsumerAlreadyUsedErr)
 				s.sendAPIErrResponse(ci, acc, subject, reply, string(rmsg), s.jsonResponse(&resp))
 				return
 			}
@@ -4069,7 +4069,7 @@ func (mset *stream) processClusteredInboundMsg(subject, reply string, hdr, msg [
 		if node := mset.raftNode(); node != nil {
 			node.StepDown()
 		}
-		return 0, ErrJetStreamResourcesExceeded
+		return 0, jsResourcesExceededErr
 	}
 
 	// Check here pre-emptively if we have exceeded our account limits.
@@ -4383,7 +4383,7 @@ RETRY:
 			} else if isOutOfSpaceErr(err) {
 				s.handleOutOfSpace(msetName)
 				return
-			} else if err == ErrJetStreamResourcesExceeded {
+			} else if err == jsResourcesExceededErr {
 				s.resourcesExeededError()
 				return
 			} else {
@@ -4419,7 +4419,7 @@ func (mset *stream) processCatchupMsg(msg []byte) (uint64, error) {
 	}
 
 	if mset.js.limitsExceeded(mset.cfg.Storage) {
-		return 0, ErrJetStreamResourcesExceeded
+		return 0, jsResourcesExceededErr
 	}
 
 	// Put into our store
