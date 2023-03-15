@@ -10,6 +10,12 @@ inputs:
     description: The label to use for built images
     required: true
 
+secrets:
+  DOCKER_PASSWORD:
+    required: true
+  DOCKER_USERNAME:
+    required: true
+
 runs:
   using: composite
   steps:
