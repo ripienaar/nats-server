@@ -17,6 +17,9 @@ jobs:
           ref: main
 
       - uses: ./src/github.com/nats-io/nats-server/.github/actions/nightly-release
+        secrets:
+          DOCKER_USERNAME: "${{ secrets.DOCKER_USERNAME }}"
+          DOCKER_PASSWORD: "${{ secrets.DOCKER_PASSWORD }}"
         with:
           go: "1.19"
           label: nightly-main
